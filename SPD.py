@@ -6,10 +6,9 @@ from torch import optim
 from torch.nn.modules.loss import MSELoss
 
 from tqdm import tqdm
-
 from numpy.linalg import matrix_rank
-
 from sklearn.datasets import make_spd_matrix
+import os
 
 # TO DO
 # test function on larger datasets
@@ -74,32 +73,28 @@ class MatrixEncoder(nn.Module):
     def __init__(self, n_features):
         super(MatrixEncoder, self).__init__()
         self.n_features = n_features
-
+        
         self.encoder = nn.Sequential(
             Linear2D(n_features, 5),
-            ShrinkBlock(5),
             SymmetricallyCleanLayer(),
             Linear2D(5, 3),
-            ShrinkBlock(3)
+            SymmetricallyCleanLayer()
         )
-
+        
         self.decoder = nn.Sequential(
             Linear2D(3, 5),
-            ShrinkBlock(5),
             SymmetricallyCleanLayer(),
             Linear2D(5, n_features),
-            ShrinkBlock(n_features)
         )
-
+        
     def forward(self, X):
         return self.decoder(self.encoder(X))
 
 
 def run_test():
 	coder = MatrixEncoder(6)
-        dataset = [Variable(FloatTensor(make_spd_matrix(6)).unsqueeze(0)) for _ in range(10)]
-        dataset = torch.cat(dataset, 0)
-	# matrix = Variable(FloatTensor(make_spd_matrix(6))).unsqueeze(0)
+	dataset = [Variable(FloatTensor(make_spd_matrix(6)).unsqueeze(0)) for _ in range(10)]
+	dataset = torch.cat(dataset, 0)
 	optimizer = optim.Adam(coder.parameters(), lr=0.1)
 	criterion = MSELoss()
 
@@ -108,12 +103,16 @@ def run_test():
             outputs = coder(dataset)
             loss = criterion(outputs, dataset)
             loss.backward(retain_graph=True)
-            #if epoch % 100 == 0:
-            #    print("EPOCH: {0}, LOSS: {1}".format(epoch, loss.data[0]))
+            if epoch % 100 == 0:
+                print("EPOCH: {0}, LOSS: {1}".format(epoch, loss.data[0]))
             optimizer.step()
 
         print(coder(dataset[0].unsqueeze(0)))
         print(dataset[0].unsqueeze(0))
+
+def run_test_mutag():
+	files = os.listdir('./test_graphs/')[1:]
+	
 
 
 if __name__ == "__main__":

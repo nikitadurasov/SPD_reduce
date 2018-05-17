@@ -13,3 +13,6 @@ def build_dataset(graphs, nodes_number=6):
 	for graph in graphs:
 	    graph.remove_nodes_from(list(graph.nodes)[nodes_number:])
     return graphs
+
+def laplacian_tensor(x):
+    return FloatTensor(np.squeeze(np.asarray(nx.laplacian_matrix(x).todense().astype('float64'))))
