@@ -4,11 +4,16 @@ from torch import FloatTensor
 from torch.autograd import Variable
 from torch import optim
 from torch.nn.modules.loss import MSELoss
+import torch.nn.functional as F
 
 from tqdm import tqdm
 from numpy.linalg import matrix_rank
 from sklearn.datasets import make_spd_matrix
 import os
+
+import dataset_tools as dt
+from random import shuffle
+import numpy as np
 
 # TO DO
 # test function on larger datasets
@@ -19,7 +24,7 @@ class Linear2D(nn.Module):
 
     def __init__(self, in_features, out_features):
         super(Linear2D, self).__init__()
-        self.W = nn.Parameter(torch.rand((out_features, in_features)))
+        self.W = nn.Parameter(torch.rand((out_features, in_features)).normal_())
 
     def forward(self, X):
         XW = self._matmul(X, self.W.transpose(0 ,1))
@@ -76,44 +81,142 @@ class MatrixEncoder(nn.Module):
         
         self.encoder = nn.Sequential(
             Linear2D(n_features, 5),
-            SymmetricallyCleanLayer(),
-            Linear2D(5, 3),
             SymmetricallyCleanLayer()
         )
         
         self.decoder = nn.Sequential(
-            Linear2D(3, 5),
-            SymmetricallyCleanLayer(),
-            Linear2D(5, n_features),
+        	Linear2D(5, n_features)
         )
         
     def forward(self, X):
         return self.decoder(self.encoder(X))
 
 
-def run_test():
+def run_test(n_iterations=100):
+
 	coder = MatrixEncoder(6)
-	dataset = [Variable(FloatTensor(make_spd_matrix(6)).unsqueeze(0)) for _ in range(10)]
-	dataset = torch.cat(dataset, 0)
+	dataset = [FloatTensor(make_spd_matrix(6)).unsqueeze(0) for _ in range(100)]
+
+	indexes = list(range(len(dataset)))
+	shuffle(indexes)
+
+	dataset = np.array(dataset)
+	dataset = dataset[indexes]
+	dataset = Variable(torch.cat(dataset, 0))
+
+	test_size = 30
+
+	train_dataset = dataset[:-test_size]
+	test_dataset = dataset[-test_size:]
+
 	optimizer = optim.Adam(coder.parameters(), lr=0.1)
 	criterion = MSELoss()
 
-	for epoch in tqdm(range(1000)):
-            optimizer.zero_grad()
-            outputs = coder(dataset)
-            loss = criterion(outputs, dataset)
-            loss.backward(retain_graph=True)
-            if epoch % 100 == 0:
-                print("EPOCH: {0}, LOSS: {1}".format(epoch, loss.data[0]))
-            optimizer.step()
+	for epoch in tqdm(range(1, n_iterations)):
+		optimizer.zero_grad()
 
-        print(coder(dataset[0].unsqueeze(0)))
-        print(dataset[0].unsqueeze(0))
+		outputs_train = coder(train_dataset)
+		outputs_test = coder(test_dataset)
 
-def run_test_mutag():
-	files = os.listdir('./test_graphs/')[1:]
-	
+		loss_train = criterion(outputs_train, train_dataset)
+		loss_test = criterion(outputs_test, test_dataset)
 
+		loss_train.backward(retain_graph=True)
+		if epoch % 10 == 0:
+			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), loss_test.data[0])
+
+		if epoch == 200:
+			optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
+		optimizer.step()
+
+	return coder, dataset
+
+def run_test_mutag(n_iterations=2000):
+	coder = MatrixEncoder(6)
+	dataset = dt.build_dataset(dt.read_test_graphs())
+	dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
+
+	indexes = list(range(len(dataset)))
+	shuffle(indexes)
+
+	dataset = np.array(dataset)
+	dataset = dataset[indexes]
+	dataset = Variable(torch.cat(dataset, 0))
+
+	test_size = 30
+
+	train_dataset = dataset[:-test_size]
+	test_dataset = dataset[-test_size:]
+
+	optimizer = optim.Adam(coder.parameters(), lr=0.1)
+	criterion = MSELoss()
+
+	for epoch in tqdm(range(1, n_iterations)):
+		optimizer.zero_grad()
+
+		outputs_train = coder(train_dataset)
+		outputs_test = coder(test_dataset)
+
+		loss_train = criterion(outputs_train, train_dataset)
+		loss_test = criterion(outputs_test, test_dataset)
+
+		loss_train.backward(retain_graph=True)
+		if epoch % 10 == 0:
+			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), loss_test.data[0])
+		optimizer.step()
+
+
+	return coder, dataset
+
+class DetNet(nn.Module):
+    def __init__(self, n_features):
+        super(DetNet, self).__init__()
+        self.n_features = n_features
+        self.fc1 = nn.Linear(n_features**2, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 1)
+        
+    def forward(self, X):
+        x = x.view(-1, n_features**2)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+def run_detetmenant(coder):
+	dataset = dt.build_dataset(dt.read_test_graphs())
+	dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
+
+	indexes = list(range(len(dataset)))
+	shuffle(indexes)
+
+	dataset = np.array(dataset)
+	dataset = dataset[indexes]
+	dataset = Variable(torch.cat(dataset, 0))
+
+	test_size = 30
+
+	train_dataset = dataset[:-test_size]
+	test_dataset = dataset[-test_size:]
+
+	optimizer = optim.Adam(coder.parameters(), lr=0.1)
+	criterion = MSELoss()
+
+	for epoch in tqdm(range(1, n_iterations)):
+		optimizer.zero_grad()
+
+		outputs_train = coder(train_dataset)
+		outputs_test = coder(test_dataset)
+
+		loss_train = criterion(outputs_train, train_dataset)
+		loss_test = criterion(outputs_test, test_dataset)
+
+		loss_train.backward(retain_graph=True)
+		if epoch % 10 == 0:
+			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), loss_test.data[0])
+		optimizer.step()
+
+
+	return coder, dataset
 
 if __name__ == "__main__":
     run_test()
