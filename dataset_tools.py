@@ -7,14 +7,18 @@ import matplotlib.pyplot as plt
 
 def read_test_graphs():
 	graphs = []
-	for graph in os.listdir('./test_graphs/')[1:]:
+	print("Reading graphs ...")
+	for graph in sorted(os.listdir('./test_graphs/')[2:], key=lambda x: int(x.split('.')[0].split('_')[1])):
+		print('---: ', graph)
 		graphs.append(nx.read_graphml('./test_graphs/' + graph))
 	return graphs
 
 def build_dataset(graphs, nodes_number=6):
+	labels = map(int, open('./test_graphs/labels.txt').read().split())
 	for graph in graphs:
 		graph.remove_nodes_from(list(graph.nodes)[nodes_number:])
-	return graphs
+	#graphs = [adjacency_tensor(x) for x in graphs]
+	return graphs, np.array(labels)
 
 def laplacian_tensor(x):
 	return FloatTensor(np.squeeze(np.asarray(nx.laplacian_matrix(x).todense().astype('float64'))))
@@ -28,9 +32,15 @@ def draw_graph_from_laplacian(x, label, ax):
 		temp[i, i] = 0 
 	nx.draw_networkx(nx.from_numpy_matrix(-temp), label=label, ax=ax)
 
-def draw_graph(x, label=None, ax=None):
+def draw_graph(x, label=None, ax=None, node_size=None, node_color=None, cmap=None):
 	temp = x.data.numpy().squeeze()
-	nx.draw_circular(nx.from_numpy_matrix(temp), label=label, ax=ax)
+	make_symmetric(temp)
+	nx.draw_shell(nx.from_numpy_matrix(temp), label=label, ax=ax, node_size=node_size, node_color=node_color, cmap=None)
+
+def make_symmetric(x):
+	for i in range(len(x)):
+		for j in range(len(x)):
+			x[j, i] = x[i, j]
 
 def draw_graphs(graph_number, dataset, coder):
 	fig, ax = plt.subplots(ncols=1, nrows=2, figsize=(5, 7))
