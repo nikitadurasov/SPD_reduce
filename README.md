@@ -96,3 +96,13 @@ based on VAE AutoEncoder
 coder, dataset = run_test_vae_mutag(20) 
 ```
 
+
+References:
+-------------
+* [Deep Manifold Learning of Symmetric Positive Definite (SPD) Matrices with Application to Face Recognition](https://aaai.org/ocs/index.php/AAAI/AAAI17/paper/download/14825/14321)
+* [Visualizing Data using t-SNE](http://www.cs.toronto.edu/~hinton/absps/tsne.pdf)
+* [Hessian Eigenmaps: new locally linear embedding techniques for high-dimensional data](https://pdfs.semanticscholar.org/ff6e/bb0ef618592dfe654a12ddca7a0b75c9176b.pdf)
+* [Adaptive Manifold Learning](https://papers.nips.cc/paper/2560-adaptive-manifold-learning.pdf)
+* [Learning with kernels](https://www.cs.utah.edu/~piyush/teaching/learning-with-kernels.pdf)
+* [A Global Geometric Frameworkfor Nonlinear DimensionalityReduction](http://web.mit.edu/cocosci/Papers/sci_reprint.pdf)
+
