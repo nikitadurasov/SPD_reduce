@@ -12,5 +12,23 @@ Encoding SPD matrixes
 -----------------------
 
 For that task two types of basic block are used:  
-* 2D Fully Connected Layer (SPD.Linear2D class)
-* Symmetrically Clean Layer (SPD.SymmetricallyCleanLayer class)
+* 2D Fully Connected Layer (***SPD.Linear2D class***)
+* Symmetrically Clean Layer (***SPD.SymmetricallyCleanLayer class***)
+
+With this block's we constract model for matrix encoding (***SPD.MatrixEncoder class***) with next architecture:
+
+```
+MatrixEncoder(
+  (encoder): Sequential(
+    (0): Linear2D()
+    (1): SymmetricallyCleanLayer(
+      (relu): ReLU()
+    )
+    (2): Tanh()
+  )
+  (decoder): Sequential(
+    (0): Linear2D()
+    (1): ReLU()
+  )
+)
+```

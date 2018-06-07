@@ -18,28 +18,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Linear2D(nn.Module):
-	"""
-	Linear block for matrixes. Forward is equivalent to matrix multiplication W^T * X * W.
+    """
+    Linear block for matrixes. Forward is equivalent to matrix multiplication W^T * X * W.
 
-	Block works with squared SPD matrixes: after forward applied to 
-	(in_features) x (in_features) matrix X, returns new SPD matrix with 
-	size (out_features, out_features). Can be applied to none SPD matrixes too.
+    Block works with squared SPD matrixes: after forward applied to 
+    (in_features) x (in_features) matrix X, returns new SPD matrix with 
+    size (out_features, out_features). Can be applied to none SPD matrixes too.
 
-	Parameters:
-	-----------
-	in_features: int
-		size of input square matrixes
+    Parameters:
+    -----------
+    in_features: int
+        size of input square matrixes
 
-	out_features: int
-		size of output square matrixes
+    out_features: int
+        size of output square matrixes
 
-	Returns
-	-------
-	torch.autograd.Variable object 
-		Output matrix - result of multiplication of input matrix 
-		and mtrix of parameters: W^T * X * W
+    Returns
+    -------
+    torch.autograd.Variable object 
+        Output matrix - result of multiplication of input matrix 
+        and mtrix of parameters: W^T * X * W
 
-	"""
+    """
 
     def __init__(self, in_features, out_features):
         super(Linear2D, self).__init__()
@@ -47,7 +47,7 @@ class Linear2D(nn.Module):
         self.W = nn.Parameter(torch.rand((out_features, in_features)).normal_()) 
 
     def forward(self, X):
-    	# apply W^T * X * W multiplication to input
+        # apply W^T * X * W multiplication to input
         XW = self._matmul(X, self.W.transpose(0 ,1))
         WXW = self._matmul(XW, self.W, kind='left')
         return WXW
@@ -63,28 +63,28 @@ class Linear2D(nn.Module):
         return torch.cat(results, 0)
 
     def check_rank(self):
-    	# check if weights matrix is degenerate
+        # check if weights matrix is degenerate
         return min(self.W.data.size()) == matrix_rank(self.W.data.numpy())
 
 
 class SymmetricallyCleanLayer(nn.Module):
-	"""
-	Symmetrically Clean Layer for matrixes. Forward is equivalent to application 
-	of ReLU block for every element of matrix.
+    """
+    Symmetrically Clean Layer for matrixes. Forward is equivalent to application 
+    of ReLU block for every element of matrix.
 
-	After application of this block to SPD matrix it returns SPD matrix of the 
-	same size. This block is analogy for common non-linear block for matrixes. 
+    After application of this block to SPD matrix it returns SPD matrix of the 
+    same size. This block is analogy for common non-linear block for matrixes. 
 
-	Parameters:
-	-----------
+    Parameters:
+    -----------
 
-	Returns
-	-------
-	torch.autograd.Variable object 
-		Output matrix - result of nullification of negative elements 
-		in input matrix.
+    Returns
+    -------
+    torch.autograd.Variable object 
+        Output matrix - result of nullification of negative elements 
+        in input matrix.
 
-	"""
+    """
     def __init__(self):
         super(SymmetricallyCleanLayer, self).__init__()
         self.relu = nn.ReLU()
@@ -94,24 +94,24 @@ class SymmetricallyCleanLayer(nn.Module):
 
 
 class NonLinearityBlock(nn.Module):
-	"""
-	NonLinearity Layer for matrixes. This block is generalization 
-	of SymmetricallyCleanLayer: NonLinearityBlock works with arbitrary
-	activation block, whereas SymmetricallyCleanLayer works with ReLU.
+    """
+    NonLinearity Layer for matrixes. This block is generalization 
+    of SymmetricallyCleanLayer: NonLinearityBlock works with arbitrary
+    activation block, whereas SymmetricallyCleanLayer works with ReLU.
 
-	Parameters:
-	-----------
-	activation: torch.nn.Module
-		type of activation function, which will be applied to
-		every element of input matrix.
+    Parameters:
+    -----------
+    activation: torch.nn.Module
+        type of activation function, which will be applied to
+        every element of input matrix.
 
-	Returns
-	-------
-	torch.autograd.Variable object 
-		Output matrix - result of application of activation block 
-		to every element of matrix.
+    Returns
+    -------
+    torch.autograd.Variable object 
+        Output matrix - result of application of activation block 
+        to every element of matrix.
 
-	"""
+    """
     def __init__(self, activation):
         super(NonLinearityBlock, self).__init__()
         self.activation = activation
@@ -138,12 +138,13 @@ class MatrixEncoder(nn.Module):
         
         self.encoder = nn.Sequential(
             Linear2D(n_features, 5),
+            SymmetricallyCleanLayer(),
             nn.Tanh()
         )
         
         self.decoder = nn.Sequential(
-        	Linear2D(5, n_features),
-        	nn.ReLU()
+            Linear2D(5, n_features),
+            nn.ReLU()
         )
         
     def forward(self, X):
@@ -222,165 +223,165 @@ class Convolution_Autoencoder(nn.Module):
 
 def run_test(in_features, n_iterations=100, size=500):
 
-	coder = MatrixEncoder(in_features)
-	dataset = [FloatTensor(10*make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
+    coder = MatrixEncoder(in_features)
+    dataset = [FloatTensor(10*make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
 
-	dataset = Variable(torch.cat(dataset, 0))
+    dataset = Variable(torch.cat(dataset, 0))
 
-	test_size = 10
+    test_size = 10
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=0.1)
-	criterion = MSELoss()
+    optimizer = optim.Adam(coder.parameters(), lr=0.1)
+    criterion = MSELoss()
 
-	loss_data = []
+    loss_data = []
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train = coder(train_dataset)
-		outputs_test = coder(test_dataset)
+        outputs_train = coder(train_dataset)
+        outputs_test = coder(test_dataset)
 
-		loss_train = criterion(outputs_train, train_dataset)
-		loss_test = criterion(outputs_test, test_dataset)
+        loss_train = criterion(outputs_train, train_dataset)
+        loss_test = criterion(outputs_test, test_dataset)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % 10 == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
+        loss_train.backward(retain_graph=True)
+        if epoch % 10 == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
 
-		loss_data.append((loss_train.data[0], float(loss_test.data[0])))
+        loss_data.append((loss_train.data[0], float(loss_test.data[0])))
 
-		optimizer.step()
+        optimizer.step()
 
-	loss_data = np.array(loss_data)
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train')
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test')
-	plt.legend()
-	plt.show()
+    loss_data = np.array(loss_data)
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train')
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test')
+    plt.legend()
+    plt.show()
 
-	return coder, dataset
+    return coder, dataset
 
 def run_test_vae(in_features, n_iterations=1000, size=1000, printing_step=10):
 
-	coder = VAE(in_features**2)
-	dataset = [FloatTensor(10*make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
+    coder = VAE(in_features**2)
+    dataset = [FloatTensor(10*make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
 
-	dataset = Variable(torch.cat(dataset, 0).reshape(size, -1))
+    dataset = Variable(torch.cat(dataset, 0).reshape(size, -1))
 
-	test_size = 3
+    test_size = 3
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=1e-4)
+    optimizer = optim.Adam(coder.parameters(), lr=1e-4)
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train, mu_train, logvar_train = coder(train_dataset)
-		outputs_test, mu_test, logvar_test = coder(test_dataset)
+        outputs_train, mu_train, logvar_train = coder(train_dataset)
+        outputs_test, mu_test, logvar_test = coder(test_dataset)
 
-		loss_train = loss_function(outputs_train, train_dataset, mu_train, logvar_train, in_features**2)
-		loss_test = loss_function(outputs_test, test_dataset, mu_test, logvar_test, in_features**2)
+        loss_train = loss_function(outputs_train, train_dataset, mu_train, logvar_train, in_features**2)
+        loss_test = loss_function(outputs_test, test_dataset, mu_test, logvar_test, in_features**2)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % printing_step == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
+        loss_train.backward(retain_graph=True)
+        if epoch % printing_step == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
 
-		if epoch == 1000:
-			optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
-		optimizer.step()
+        if epoch == 1000:
+            optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
+        optimizer.step()
 
-	return coder, dataset
+    return coder, dataset
 
 def run_test_conv(in_features, n_iterations=1000, size=1000, printing_step=10):
 
-	coder = Convolution_Autoencoder(in_features**2)
-	dataset = [FloatTensor(make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
+    coder = Convolution_Autoencoder(in_features**2)
+    dataset = [FloatTensor(make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
 
-	dataset = Variable(torch.cat(dataset, 0).reshape(size, 1, in_features, in_features))
+    dataset = Variable(torch.cat(dataset, 0).reshape(size, 1, in_features, in_features))
 
-	test_size = 30
+    test_size = 30
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=0.1)
-	loss_function = nn.MSELoss()
+    optimizer = optim.Adam(coder.parameters(), lr=0.1)
+    loss_function = nn.MSELoss()
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train = coder(train_dataset)
-		outputs_test = coder(test_dataset)
+        outputs_train = coder(train_dataset)
+        outputs_test = coder(test_dataset)
 
-		loss_train = loss_function(outputs_train, train_dataset)
-		loss_test = loss_function(outputs_test, test_dataset)
+        loss_train = loss_function(outputs_train, train_dataset)
+        loss_test = loss_function(outputs_test, test_dataset)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % printing_step == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
+        loss_train.backward(retain_graph=True)
+        if epoch % printing_step == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
 
-		if epoch == 1000:
-			optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
-		optimizer.step()
+        if epoch == 1000:
+            optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
+        optimizer.step()
 
-	return coder, dataset
+    return coder, dataset
 
 
 def run_test_mutag(in_features, n_iterations=2000):
-	coder = MatrixEncoder(in_features)
-	dataset = dt.build_dataset(dt.read_test_graphs(), nodes_number=in_features)[0]
-	dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
-	shuffle(dataset)
-	dataset = Variable(torch.cat(dataset, 0))
+    coder = MatrixEncoder(in_features)
+    dataset = dt.build_dataset(dt.read_test_graphs(), nodes_number=in_features)[0]
+    dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
+    shuffle(dataset)
+    dataset = Variable(torch.cat(dataset, 0))
 
-	test_size = 30
+    test_size = 30
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=3e-1)
-	criterion = MSELoss()
+    optimizer = optim.Adam(coder.parameters(), lr=3e-1)
+    criterion = MSELoss()
 
-	loss_data = []
+    loss_data = []
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train = coder(train_dataset)
-		outputs_test = coder(test_dataset)
+        outputs_train = coder(train_dataset)
+        outputs_test = coder(test_dataset)
 
-		loss_train = criterion(outputs_train, train_dataset)
-		loss_test = criterion(outputs_test, test_dataset)
+        loss_train = criterion(outputs_train, train_dataset)
+        loss_test = criterion(outputs_test, test_dataset)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % 10 == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
+        loss_train.backward(retain_graph=True)
+        if epoch % 10 == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
 
-		if epoch == 1000:
-			optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
+        if epoch == 1000:
+            optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
 
-		loss_data.append((loss_train.data[0], float(loss_test.data[0])))
+        loss_data.append((loss_train.data[0], float(loss_test.data[0])))
 
-		optimizer.step()
+        optimizer.step()
 
-	fig = plt.figure()
-	loss_data = np.array(loss_data)
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train', c='r')
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test', c='b')
-	plt.title("MSELoss per epoch for train/test")
-	plt.xlabel('epoch')
-	plt.ylabel('MSELoss')
-	plt.grid()
-	plt.legend()
-	plt.show()
+    fig = plt.figure()
+    loss_data = np.array(loss_data)
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train', c='r')
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test', c='b')
+    plt.title("MSELoss per epoch for train/test")
+    plt.xlabel('epoch')
+    plt.ylabel('MSELoss')
+    plt.grid()
+    plt.legend()
+    plt.show()
 
-	fig.savefig('loss.pdf', format='pdf')
+    fig.savefig('loss.pdf', format='pdf')
 
-	return coder, dataset, loss_data
+    return coder, dataset, loss_data
 
 class DetNet(nn.Module):
     def __init__(self, n_features):
@@ -397,86 +398,86 @@ class DetNet(nn.Module):
         return self.fc3(x)
 
 def run_detetmenant(in_features, n_iterations=100, size=100):
-	coder = DetNet(in_features)
-	dataset = [FloatTensor(make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
+    coder = DetNet(in_features)
+    dataset = [FloatTensor(make_spd_matrix(in_features)).unsqueeze(0) for _ in range(size)]
 
-	dataset = Variable(torch.cat(dataset, 0))
+    dataset = Variable(torch.cat(dataset, 0))
 
-	test_size = 30
+    test_size = 30
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=0.1)
-	criterion = MSELoss()
+    optimizer = optim.Adam(coder.parameters(), lr=0.1)
+    criterion = MSELoss()
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train = coder(train_dataset)
-		outputs_test = coder(test_dataset)
+        outputs_train = coder(train_dataset)
+        outputs_test = coder(test_dataset)
 
-		loss_train = criterion(outputs_train, train_dataset)
-		loss_test = criterion(outputs_test, test_dataset)
+        loss_train = criterion(outputs_train, train_dataset)
+        loss_test = criterion(outputs_test, test_dataset)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % 10 == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), loss_test.data[0])
-		optimizer.step()
+        loss_train.backward(retain_graph=True)
+        if epoch % 10 == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), loss_test.data[0])
+        optimizer.step()
 
 
-	return coder, dataset
+    return coder, dataset
 
 def run_test_vae_mutag(in_features, n_iterations=1000, size=1000, printing_step=10):
 
-	coder = VAE(in_features**2)
+    coder = VAE(in_features**2)
 
-	dataset = dt.build_dataset(dt.read_test_graphs(), nodes_number=in_features)[0]
-	dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
-	shuffle(dataset)
-	dataset = Variable(torch.cat(dataset, 0))
+    dataset = dt.build_dataset(dt.read_test_graphs(), nodes_number=in_features)[0]
+    dataset = [dt.adjacency_tensor(x).unsqueeze(0) for x in dataset]
+    shuffle(dataset)
+    dataset = Variable(torch.cat(dataset, 0))
 
-	test_size = 3
+    test_size = 3
 
-	train_dataset = dataset[:-test_size]
-	test_dataset = dataset[-test_size:]
+    train_dataset = dataset[:-test_size]
+    test_dataset = dataset[-test_size:]
 
-	optimizer = optim.Adam(coder.parameters(), lr=1e-3)
+    optimizer = optim.Adam(coder.parameters(), lr=1e-3)
 
-	loss_data = []
+    loss_data = []
 
-	for epoch in tqdm(range(1, n_iterations)):
-		optimizer.zero_grad()
+    for epoch in tqdm(range(1, n_iterations)):
+        optimizer.zero_grad()
 
-		outputs_train, mu_train, logvar_train = coder(train_dataset)
-		outputs_test, mu_test, logvar_test = coder(test_dataset)
+        outputs_train, mu_train, logvar_train = coder(train_dataset)
+        outputs_test, mu_test, logvar_test = coder(test_dataset)
 
-		loss_train = loss_function(outputs_train, train_dataset, mu_train, logvar_train, in_features**2)
-		loss_test = loss_function(outputs_test, test_dataset, mu_test, logvar_test, in_features**2)
+        loss_train = loss_function(outputs_train, train_dataset, mu_train, logvar_train, in_features**2)
+        loss_test = loss_function(outputs_test, test_dataset, mu_test, logvar_test, in_features**2)
 
-		loss_train.backward(retain_graph=True)
-		if epoch % printing_step == 0:
-			print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
+        loss_train.backward(retain_graph=True)
+        if epoch % printing_step == 0:
+            print("EPOCH: {0}, TRAIN LOSS: {1}, TEST LOSS".format(epoch, loss_train.data[0]), float(loss_test.data[0]))
 
-		if epoch == 1000:
-			optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
+        if epoch == 1000:
+            optimizer.state_dict()['param_groups'][0]['lr'] == optimizer.state_dict()['param_groups'][0]['lr'] * 0.1
 
-		loss_data.append((loss_train.data[0], float(loss_test.data[0])))
+        loss_data.append((loss_train.data[0], float(loss_test.data[0])))
 
-		optimizer.step()
+        optimizer.step()
 
-	fig = plt.figure()
-	loss_data = np.array(loss_data)
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train', c='r')
-	plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test', c='b')
-	plt.title("MSELoss per epoch for train/test")
-	plt.xlabel('epoch')
-	plt.ylabel('MSELoss')
-	plt.grid()
-	plt.legend()
-	plt.show()
+    fig = plt.figure()
+    loss_data = np.array(loss_data)
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 0], label='train', c='r')
+    plt.plot(range(len(loss_data[20:])), loss_data[20:, 1], label='test', c='b')
+    plt.title("MSELoss per epoch for train/test")
+    plt.xlabel('epoch')
+    plt.ylabel('MSELoss')
+    plt.grid()
+    plt.legend()
+    plt.show()
 
-	return coder, dataset
+    return coder, dataset
 
 
 if __name__ == "__main__":
